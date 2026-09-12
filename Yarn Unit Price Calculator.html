@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Yarn Unit Price Calculator</title>
+<style>
+  :root{
+    --ink:#152238;
+    --ink-2:#0b1526;
+    --gold:#c9962c;
+    --gold-dark:#a97c1e;
+    --gold-soft:#fbf1dd;
+    --paper:#f5f4f0;
+    --surface:#ffffff;
+    --line:#e4e1d6;
+    --line-strong:#d3cfc0;
+    --text:#1b1c1e;
+    --text-muted:#6f6d64;
+    --danger:#b3261e;
+    --danger-soft:#fbeceb;
+    --radius:6px;
+    --shadow-sm:0 1px 2px rgba(21,34,56,0.06), 0 1px 1px rgba(21,34,56,0.04);
+    --shadow-md:0 6px 20px rgba(21,34,56,0.10);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--text);
+    line-height:1.45;
+  }
+  .num{
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",Menlo,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    position:relative;
+    background:linear-gradient(160deg,var(--ink) 0%, var(--ink-2) 100%);
+    color:#fff;
+    padding:36px 20px 30px;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  header::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:-1;
+    opacity:0.5;
+    background-image: repeating-linear-gradient(
+        115deg,
+        rgba(201,150,44,0.10) 0px,
+        rgba(201,150,44,0.10) 1px,
+        transparent 1px,
+        transparent 34px
+      ),
+      repeating-linear-gradient(
+        25deg,
+        rgba(255,255,255,0.035) 0px,
+        rgba(255,255,255,0.035) 1px,
+        transparent 1px,
+        transparent 26px
+      );
+  }
+  .header-inner{
+    max-width:1040px;
+    margin:0 auto;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .brand-mark{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .brand-mark .spool{
+    width:22px; height:22px;
+    border-radius:50%;
+    border:3px solid var(--gold);
+    position:relative;
+    flex:none;
+  }
+  .brand-mark .spool::after{
+    content:"";
+    position:absolute;
+    inset:5px;
+    border-radius:50%;
+    background:var(--gold);
+    opacity:.55;
+  }
+  .brand-mark span{
+    font-size:12px;
+    letter-spacing:.5px;
+    color:#c7cede;
+  }
+  header h1{
+    margin:0;
+    font-size:clamp(22px,3.4vw,30px);
+    font-weight:650;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:6px 0 0;
+    font-size:14px;
+    color:#aab2c4;
+    font-weight:400;
+  }
+  .header-side{
+    font-size:12px;
+    color:#8f97ac;
+    text-align:right;
+    line-height:1.6;
+  }
+  .header-side b{ color:#e7ddc4; font-weight:600; }
+
+  /* ---------- Layout ---------- */
+  .container{
+    max-width:1040px;
+    margin:0 auto;
+    padding:22px 16px 64px;
+  }
+
+  .reveal{
+    opacity:0;
+    transform:translateY(10px);
+    animation:rise .5s var(--ease) forwards;
+  }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0); } }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 20px 22px;
+    margin-bottom:18px;
+    box-shadow:var(--shadow-sm);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:3px;
+    background:var(--line-strong);
+    border-radius:var(--radius) 0 0 var(--radius);
+  }
+  .card.accent::before{ background:var(--gold); }
+
+  .card h2{
+    margin:0 0 16px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--text-muted);
+    letter-spacing:.03em;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--line);
+  }
+
+  /* ---------- Inputs ---------- */
+  .input-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .field label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-muted);
+    margin-bottom:7px;
+  }
+  select, input[type="number"]{
+    width:100%;
+    padding:11px 12px;
+    font-size:15px;
+    font-family:inherit;
+    border:1px solid var(--line-strong);
+    border-radius:var(--radius);
+    background:#fff;
+    color:var(--text);
+    outline:none;
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease);
+  }
+  select{ cursor:pointer; }
+  select:hover, input[type="number"]:hover{ border-color:#b9b4a1; }
+  select:focus-visible, input[type="number"]:focus-visible{
+    border-color:var(--gold-dark);
+    box-shadow:0 0 0 3px rgba(201,150,44,0.22);
+  }
+  input.invalid{
+    border-color:var(--danger);
+    background:var(--danger-soft);
+  }
+  .error-msg{
+    color:var(--danger);
+    font-size:12.5px;
+    margin-top:6px;
+    min-height:16px;
+    opacity:0;
+    transform:translateY(-3px);
+    transition:opacity .18s var(--ease), transform .18s var(--ease);
+  }
+  .error-msg.show{ opacity:1; transform:translateY(0); }
+
+  .btn-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:6px;
+  }
+  button{
+    cursor:pointer;
+    border:1px solid transparent;
+    border-radius:var(--radius);
+    padding:10.5px 18px;
+    font-size:13.5px;
+    font-weight:600;
+    font-family:inherit;
+    transition:transform .12s var(--ease), background .16s var(--ease), border-color .16s var(--ease), box-shadow .16s var(--ease), color .16s var(--ease);
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:active{ transform:translateY(1px) scale(.99); }
+  .btn-primary{
+    background:var(--gold);
+    color:var(--ink-2);
+    box-shadow:0 2px 0 var(--gold-dark);
+  }
+  .btn-primary:hover{ background:#d5a53c; }
+  .btn-primary:active{ box-shadow:0 0 0 var(--gold-dark); transform:translateY(2px); }
+  .btn-secondary{
+    background:var(--paper);
+    color:var(--text);
+    border-color:var(--line-strong);
+  }
+  .btn-secondary:hover{ background:#eceae2; }
+  .btn-outline{
+    background:#fff;
+    color:var(--text);
+    border-color:var(--line-strong);
+  }
+  .btn-outline:hover{ border-color:var(--ink); color:var(--ink); }
+  .btn-flash{ background:#2f7a4d !important; color:#fff !important; border-color:#2f7a4d !important; }
+
+  /* ---------- Summary ---------- */
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  .summary-item{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 14px;
+    text-align:center;
+    transition:border-color .2s var(--ease), background .2s var(--ease);
+  }
+  .summary-item .label{
+    font-size:11.5px;
+    color:var(--text-muted);
+    letter-spacing:.03em;
+    margin-bottom:8px;
+  }
+  .summary-item .value{
+    font-size:22px;
+    font-weight:700;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,monospace;
+  }
+  .summary-item.pulse{ animation:pulseIn .4s var(--ease); }
+  @keyframes pulseIn{
+    0%{ background:var(--gold-soft); border-color:var(--gold); }
+    100%{ background:var(--paper); border-color:var(--line); }
+  }
+
+  /* ---------- Table ---------- */
+  .table-wrap{
+    overflow-x:auto;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    -webkit-overflow-scrolling:touch;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+    min-width:340px;
+  }
+  thead th{
+    position:sticky;
+    top:0;
+    background:var(--ink);
+    color:#eef0f5;
+    text-align:left;
+    padding:11px 16px;
+    font-weight:600;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    z-index:1;
+  }
+  thead th:last-child, tbody td:last-child{ text-align:right; }
+  tbody td{
+    padding:11px 16px;
+    border-bottom:1px solid var(--line);
+    transition:background .5s var(--ease), color .3s var(--ease);
+  }
+  tbody td:last-child{ font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,monospace; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:nth-child(even) td{ background:#fbfaf7; }
+  tbody tr:hover td{ background:#f1efe8; }
+  tbody tr.highlight td{
+    background:var(--gold-soft) !important;
+    font-weight:700;
+    color:var(--gold-dark);
+    box-shadow:inset 3px 0 0 var(--gold);
+  }
+  tbody tr.flash td{ background:#f3e4bb !important; }
+
+  footer{
+    text-align:center;
+    color:var(--text-muted);
+    font-size:12px;
+    padding:22px 0 8px;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:640px){
+    .input-grid{ grid-template-columns:1fr; }
+    .summary-grid{ grid-template-columns:1fr; }
+    header{ padding:28px 16px 24px; }
+    .header-side{ display:none; }
+    .btn-row{ flex-direction:column; }
+    .btn-row button{ width:100%; }
+  }
+
+  @media (max-width:480px){
+    table thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{
+      border-bottom:1px solid var(--line);
+      padding:10px 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    tbody tr:last-child{ border-bottom:none; }
+    tbody td{ border:none; padding:2px 0; }
+    tbody td:first-child::before{
+      content:"Count";
+      display:block;
+      font-size:10.5px;
+      color:var(--text-muted);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    tbody td:last-child::before{
+      content:"Unit Price";
+      display:block;
+      font-size:10.5px;
+      color:var(--text-muted);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      text-align:right;
+    }
+    tbody tr.highlight{ box-shadow:inset 3px 0 0 var(--gold); }
+  }
+
+  @media print{
+    header::before{ display:none; }
+    .no-print{ display:none !important; }
+    body{ background:#fff; }
+    .card{ box-shadow:none; border:1px solid #ccc; }
+    .reveal{ animation:none; opacity:1; transform:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="brand-mark"><span class="spool"></span><span>COUNT&nbsp;&middot;&nbsp;RATE&nbsp;&middot;&nbsp;PRICE</span></div>
+      <h1>Yarn Unit Price Calculator</h1>
+      <p>Solid / Color Yarn — Count Wise Unit Price</p>
+    </div>
+    <div class="header-side">Auto-calculates on entry<br><b>16/Cd&nbsp;&ndash;&nbsp;40/Cd</b> covered</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="card accent reveal" style="animation-delay:.02s">
+    <h2>INPUT</h2>
+    <div class="input-grid">
+      <div class="field">
+        <label for="baseCount">Base Count</label>
+        <select id="baseCount"></select>
+      </div>
+      <div class="field">
+        <label for="baseRate">Base Unit Price (USD)</label>
+        <input type="number" id="baseRate" step="0.01" value="2.80" min="0" inputmode="decimal">
+        <div class="error-msg" id="rateError"></div>
+      </div>
+    </div>
+    <div class="btn-row no-print">
+      <button class="btn-primary" id="calcBtn">Calculate</button>
+      <button class="btn-secondary" id="resetBtn">Reset</button>
+      <button class="btn-outline" id="copyBtn">Copy Results</button>
+      <button class="btn-outline" id="printBtn">Print</button>
+      <button class="btn-outline" id="csvBtn">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card reveal" style="animation-delay:.08s">
+    <h2>SUMMARY</h2>
+    <div class="summary-grid">
+      <div class="summary-item" id="cardBaseCount">
+        <div class="label">Base Count</div>
+        <div class="value" id="sumBaseCount">-</div>
+      </div>
+      <div class="summary-item" id="cardBaseRate">
+        <div class="label">Base Rate</div>
+        <div class="value" id="sumBaseRate">-</div>
+      </div>
+      <div class="summary-item" id="cardTotalCounts">
+        <div class="label">Total Counts</div>
+        <div class="value" id="sumTotalCounts">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card reveal" style="animation-delay:.14s">
+    <h2>COUNT WISE UNIT PRICE</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Count</th>
+            <th>Unit Price (USD)</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Yarn Unit Price Calculator &mdash; internal MIS tool</footer>
+</div>
+
+<script>
+(function(){
+  var SCALE = [
+    { count:"16/Cd", rel:0.00 },
+    { count:"18/Cd", rel:0.00 },
+    { count:"20/Cd", rel:0.00 },
+    { count:"22/Cd", rel:0.00 },
+    { count:"24/Cd", rel:0.05 },
+    { count:"26/Cd", rel:0.05 },
+    { count:"28/Cd", rel:0.10 },
+    { count:"30/Cd", rel:0.10 },
+    { count:"32/Cd", rel:0.20 },
+    { count:"34/Cd", rel:0.30 },
+    { count:"36/Cd", rel:0.45 },
+    { count:"38/Cd", rel:0.60 },
+    { count:"40/Cd", rel:0.75 }
+  ];
+
+  var baseCountSel = document.getElementById('baseCount');
+  var baseRateInput = document.getElementById('baseRate');
+  var rateError = document.getElementById('rateError');
+  var resultBody = document.getElementById('resultBody');
+  var sumBaseCount = document.getElementById('sumBaseCount');
+  var sumBaseRate = document.getElementById('sumBaseRate');
+  var sumTotalCounts = document.getElementById('sumTotalCounts');
+  var cardBaseCount = document.getElementById('cardBaseCount');
+  var cardBaseRate = document.getElementById('cardBaseRate');
+  var cardTotalCounts = document.getElementById('cardTotalCounts');
+
+  var lastResults = null;
+  var debounceTimer = null;
+
+  function populateDropdown(){
+    SCALE.forEach(function(item){
+      var opt = document.createElement('option');
+      opt.value = item.count;
+      opt.textContent = item.count;
+      if(item.count === "28/Cd") opt.selected = true;
+      baseCountSel.appendChild(opt);
+    });
+  }
+
+  function findRel(count){
+    for(var i=0;i<SCALE.length;i++){
+      if(SCALE[i].count === count) return SCALE[i].rel;
+    }
+    return null;
+  }
+
+  function fmt(n){ return "$" + n.toFixed(2); }
+
+  function showError(msg){
+    rateError.textContent = msg;
+    if(msg){
+      rateError.classList.add('show');
+      baseRateInput.classList.add('invalid');
+    } else {
+      rateError.classList.remove('show');
+      baseRateInput.classList.remove('invalid');
+    }
+  }
+
+  function validate(){
+    var raw = baseRateInput.value.trim();
+    var rate = parseFloat(raw);
+    if(raw === "" || isNaN(rate)){
+      showError("Please enter a valid Base Unit Price.");
+      return null;
+    }
+    if(rate < 0){
+      showError("Base Unit Price cannot be negative.");
+      return null;
+    }
+    showError("");
+    return rate;
+  }
+
+  function pulse(el){
+    el.classList.remove('pulse');
+    void el.offsetWidth; // restart animation
+    el.classList.add('pulse');
+  }
+
+  function calculate(opts){
+    opts = opts || {};
+    var rate = validate();
+    if(rate === null){
+      resultBody.innerHTML = "";
+      sumBaseCount.textContent = "-";
+      sumBaseRate.textContent = "-";
+      sumTotalCounts.textContent = "-";
+      lastResults = null;
+      return;
+    }
+
+    var baseCount = baseCountSel.value;
+    var baseRel = findRel(baseCount);
+
+    var results = SCALE.map(function(item){
+      var price = rate + (item.rel - baseRel);
+      if(price < 0) price = 0;
+      return { count:item.count, price:price, isBase:(item.count === baseCount) };
+    });
+
+    resultBody.innerHTML = "";
+    results.forEach(function(r){
+      var tr = document.createElement('tr');
+      if(r.isBase) tr.className = 'highlight';
+      var tdCount = document.createElement('td');
+      tdCount.textContent = r.count;
+      var tdPrice = document.createElement('td');
+      tdPrice.textContent = fmt(r.price);
+      tr.appendChild(tdCount);
+      tr.appendChild(tdPrice);
+      resultBody.appendChild(tr);
+      if(opts.flash){
+        tr.classList.add('flash');
+        setTimeout((function(row){ return function(){ row.classList.remove('flash'); }; })(tr), 420);
+      }
+    });
+
+    sumBaseCount.textContent = baseCount;
+    sumBaseRate.textContent = fmt(rate);
+    sumTotalCounts.textContent = SCALE.length;
+
+    if(opts.flash){
+      pulse(cardBaseCount);
+      pulse(cardBaseRate);
+      pulse(cardTotalCounts);
+    }
+
+    lastResults = results;
+  }
+
+  function resetForm(){
+    baseCountSel.value = "28/Cd";
+    baseRateInput.value = "2.80";
+    showError("");
+    calculate({ flash:true });
+  }
+
+  function copyResults(){
+    if(!lastResults) return;
+    var lines = ["Count\tUnit Price (USD)"];
+    lastResults.forEach(function(r){ lines.push(r.count + "\t" + r.price.toFixed(2)); });
+    var text = lines.join("\n");
+
+    function done(){ flashButton(copyBtn, "Copied ✓"); }
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, cb){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(cb) cb();
+  }
+
+  function flashButton(btn, msg){
+    var original = btn.textContent;
+    btn.classList.add('btn-flash');
+    btn.textContent = msg;
+    setTimeout(function(){
+      btn.classList.remove('btn-flash');
+      btn.textContent = original;
+    }, 1200);
+  }
+
+  function exportCSV(){
+    if(!lastResults) return;
+    var lines = ["Count,Unit Price (USD)"];
+    lastResults.forEach(function(r){ lines.push(r.count + "," + r.price.toFixed(2)); });
+    var csv = lines.join("\n");
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = "yarn_unit_price_" + baseCountSel.value.replace('/','_') + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flashButton(csvBtn, "Exported ✓");
+  }
+
+  var calcBtn = document.getElementById('calcBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var copyBtn = document.getElementById('copyBtn');
+  var printBtn = document.getElementById('printBtn');
+  var csvBtn = document.getElementById('csvBtn');
+
+  calcBtn.addEventListener('click', function(){ calculate({ flash:true }); });
+  resetBtn.addEventListener('click', resetForm);
+  copyBtn.addEventListener('click', copyResults);
+  printBtn.addEventListener('click', function(){ window.print(); });
+  csvBtn.addEventListener('click', exportCSV);
+
+  baseCountSel.addEventListener('change', function(){ calculate({ flash:true }); });
+
+  baseRateInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      calculate({ flash:true });
+    }
+  });
+
+  // Live automation: debounce-calculate as the user types
+  baseRateInput.addEventListener('input', function(){
+    showError("");
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function(){ calculate(); }, 300);
+  });
+
+  populateDropdown();
+  calculate(); // automatic calculation on page load
+})();
+</script>
+
+</body>
+</html>
